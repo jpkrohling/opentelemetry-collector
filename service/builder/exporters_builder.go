@@ -101,10 +101,12 @@ func (exps Exporters) StartAll(ctx context.Context, host component.Host) error {
 func (exps Exporters) ShutdownAll(ctx context.Context) error {
 	var errs []error
 	for _, exp := range exps {
+		exp.logger.Info("Exporter is shutting down...")
 		err := exp.Shutdown(ctx)
 		if err != nil {
 			errs = append(errs, err)
 		}
+		exp.logger.Info("Exporter is down")
 	}
 
 	if len(errs) != 0 {

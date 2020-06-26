@@ -22,6 +22,7 @@ import (
 	"go.opentelemetry.io/collector/consumer/consumerdata"
 	"go.opentelemetry.io/collector/consumer/pdata"
 	"go.opentelemetry.io/collector/obsreport"
+	"go.uber.org/zap"
 )
 
 // traceDataPusherOld is a helper function that is similar to ConsumeTraceData but also
@@ -105,6 +106,7 @@ func (p traceDataPusherOld) withObservability(exporterName string) traceDataPush
 }
 
 type traceExporter struct {
+	logger           *zap.Logger
 	exporterFullName string
 	dataPusher       traceDataPusher
 	shutdown         Shutdown

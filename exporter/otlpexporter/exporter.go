@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff"
+	"go.uber.org/zap"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -34,6 +35,8 @@ import (
 )
 
 type exporterImp struct {
+	logger *zap.Logger
+
 	// Input configuration.
 	config *Config
 
@@ -57,8 +60,9 @@ var (
 
 // Crete new exporter and start it. The exporter will begin connecting but
 // this function may return before the connection is established.
-func newExporter(config *Config) (*exporterImp, error) {
+func newExporter(logger *zap.Logger, config *Config) (*exporterImp, error) {
 	e := &exporterImp{}
+	e.logger = logger
 	e.config = config
 
 	var err error

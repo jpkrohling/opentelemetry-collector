@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenterror"
@@ -29,9 +30,11 @@ import (
 	otlpmetrics "go.opentelemetry.io/collector/internal/data/opentelemetry-proto-gen/collector/metrics/v1"
 	otlptrace "go.opentelemetry.io/collector/internal/data/opentelemetry-proto-gen/collector/trace/v1"
 	otlplogs "go.opentelemetry.io/collector/internal/data/opentelemetry-proto-gen/logs/v1"
+	"go.uber.org/zap"
 )
 
 type otlpExporter struct {
+	logger    *zap.Logger
 	exporters chan *exporterImp
 }
 
@@ -63,7 +66,7 @@ func NewTraceExporter(
 	params component.ExporterCreateParams,
 	config configmodels.Exporter,
 ) (component.TraceExporter, error) {
-	oce, err := createOTLPExporter(config)
+	oce, err := createOTLPExporter(params.Logger, config)
 	if err != nil {
 		return nil, err
 	}
@@ -81,10 +84,10 @@ func NewTraceExporter(
 // NewMetricsExporter creates an OTLP metrics exporter.
 func NewMetricsExporter(
 	_ context.Context,
-	_ component.ExporterCreateParams,
+	params component.ExporterCreateParams,
 	config configmodels.Exporter,
 ) (component.MetricsExporter, error) {
-	oce, err := createOTLPExporter(config)
+	oce, err := createOTLPExporter(params.Logger, config)
 	if err != nil {
 		return nil, err
 	}
@@ -103,10 +106,10 @@ func NewMetricsExporter(
 // NewLogExporter creates an OTLP log exporter.
 func NewLogExporter(
 	_ context.Context,
-	_ component.ExporterCreateParams,
+	params component.ExporterCreateParams,
 	config configmodels.Exporter,
 ) (component.LogExporter, error) {
-	oce, err := createOTLPExporter(config)
+	oce, err := createOTLPExporter(params.Logger, config)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +126,11 @@ func NewLogExporter(
 }
 
 // createOTLPExporter creates an OTLP exporter.
-func createOTLPExporter(config configmodels.Exporter) (*otlpExporter, error) {
+func createOTLPExporter(logger *zap.Logger, config configmodels.Exporter) (*otlpExporter, error) {
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+
 	oCfg := config.(*Config)
 
 	if oCfg.Endpoint == "" {
@@ -144,13 +151,13 @@ func createOTLPExporter(config configmodels.Exporter) (*otlpExporter, error) {
 		// to report errors asynchronously using Host.ReportFatalError we can move this
 		// code to Start() and do it in background to avoid blocking Collector startup
 		// as we do now.
-		exporter, serr := newExporter(oCfg)
+		exporter, serr := newExporter(logger, oCfg)
 		if serr != nil {
 			return nil, fmt.Errorf("cannot configure OTLP exporter: %v", serr)
 		}
 		exportersChan <- exporter
 	}
-	oce := &otlpExporter{exporters: exportersChan}
+	oce := &otlpExporter{logger: logger, exporters: exportersChan}
 	return oce, nil
 }
 
@@ -187,6 +194,7 @@ func (oce *otlpExporter) Shutdown(context.Context) error {
 
 func (oce *otlpExporter) pushTraceData(ctx context.Context, td pdata.Traces) (int, error) {
 	// Get first available exporter.
+	oce.logger.Debug("acquiring exporter")
 	exporter, ok := <-oce.exporters
 	if !ok {
 		err := &exporterError{
@@ -200,9 +208,14 @@ func (oce *otlpExporter) pushTraceData(ctx context.Context, td pdata.Traces) (in
 	request := &otlptrace.ExportTraceServiceRequest{
 		ResourceSpans: pdata.TracesToOtlp(td),
 	}
-	err := exporter.exportTrace(ctx, request)
+
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, 1*time.Second)
+	defer cancel()
+	oce.logger.Debug("exporting trace")
+	err := exporter.exportTrace(ctxWithTimeout, request)
 
 	// Return the exporter to the pool.
+	oce.logger.Debug("returning exporter to the pool")
 	oce.exporters <- exporter
 	if err != nil {
 		return td.SpanCount(), err

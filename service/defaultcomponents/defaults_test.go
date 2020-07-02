@@ -42,6 +42,7 @@ import (
 	"go.opentelemetry.io/collector/processor/samplingprocessor/probabilisticsamplerprocessor"
 	"go.opentelemetry.io/collector/processor/samplingprocessor/tailsamplingprocessor"
 	"go.opentelemetry.io/collector/processor/spanprocessor"
+	"go.opentelemetry.io/collector/processor/tenantprocessor"
 	"go.opentelemetry.io/collector/receiver/hostmetricsreceiver"
 	"go.opentelemetry.io/collector/receiver/jaegerreceiver"
 	"go.opentelemetry.io/collector/receiver/opencensusreceiver"
@@ -76,6 +77,7 @@ func TestDefaultComponents(t *testing.T) {
 		"probabilistic_sampler": &probabilisticsamplerprocessor.Factory{},
 		"span":                  &spanprocessor.Factory{},
 		"filter":                &filterprocessor.Factory{},
+		"tenant":                &tenantprocessor.Factory{},
 	}
 	expectedExporters := map[configmodels.Type]component.ExporterFactoryBase{
 		"opencensus": &opencensusexporter.Factory{},

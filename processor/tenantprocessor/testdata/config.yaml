@@ -1,0 +1,25 @@
+receivers:
+  examplereceiver:
+
+processors:
+  tenant/basic:
+    from_bearer_token:
+      from_attributes: ["kubernetes.io/serviceaccount/namespace"]
+
+  tenant/custom-header:
+    from_bearer_token:
+      header: "auth" # by default, it's named after the HTTP header for the same purpose: Authorization
+      format: "%s.%s"
+      from_attributes:
+      - "kubernetes.io/serviceaccount/namespace"
+      - "kubernetes.io/serviceaccount/service-account.name"
+
+exporters:
+  exampleexporter:
+
+service:
+  pipelines:
+    traces:
+      receivers: [examplereceiver]
+      processors: [tenant/basic]
+      exporters: [exampleexporter]

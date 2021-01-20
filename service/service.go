@@ -42,6 +42,7 @@ import (
 	"go.opentelemetry.io/collector/internal/collector/telemetry"
 	"go.opentelemetry.io/collector/internal/version"
 	"go.opentelemetry.io/collector/service/builder"
+	"go.opentelemetry.io/collector/service/dependency"
 	"go.opentelemetry.io/collector/service/internal"
 )
 
@@ -322,6 +323,8 @@ func (app *Application) setupPipelines(ctx context.Context) error {
 		return fmt.Errorf("cannot build builtExporters: %w", err)
 	}
 
+	injectDependencies(app.builtExtensions, app.builtExporters)
+
 	app.logger.Info("Starting exporters...")
 	err = app.builtExporters.StartAll(ctx, app)
 	if err != nil {
@@ -354,6 +357,28 @@ func (app *Application) setupPipelines(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func injectDependencies(extensions builder.Extensions, toInject builder.Exporters) {
+	// find the auth dependency to inject
+	var auth dependency.Authenticator = nil
+	for _, ext := range extensions {
+		e, ok := ext.(dependency.Authenticator)
+		if ok {
+			if ext != nil {
+				// log a message, we have multiple authenticators
+			}
+			auth = e
+		}
+	}
+
+	if auth != nil {
+		for _, exp := range toInject {
+			if e, ok := exp.(dependency.WantsAuthenticator); ok {
+				e.SetAuthenticator(auth)
+			}
+		}
+	}
 }
 
 func (app *Application) shutdownPipelines(ctx context.Context) error {

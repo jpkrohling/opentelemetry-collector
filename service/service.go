@@ -373,7 +373,10 @@ func injectDependencies(extensions builder.Extensions, toInject builder.Exporter
 	}
 
 	if auth != nil {
-		for _, exp := range toInject {
+		for cfg, exp := range toInject {
+			if e, ok := cfg.(dependency.WantsAuthenticator); ok {
+				e.SetAuthenticator(auth)
+			}
 			if e, ok := exp.(dependency.WantsAuthenticator); ok {
 				e.SetAuthenticator(auth)
 			}

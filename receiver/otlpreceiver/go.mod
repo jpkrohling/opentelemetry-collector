@@ -4,6 +4,7 @@ go 1.19
 
 require (
 	github.com/gogo/protobuf v1.3.2
+	github.com/klauspost/compress v1.16.6
 	github.com/stretchr/testify v1.8.4
 	go.opentelemetry.io/collector v0.80.0
 	go.opentelemetry.io/collector/component v0.80.0
@@ -19,7 +20,7 @@ require (
 	go.opentelemetry.io/collector/semconv v0.80.0
 	go.uber.org/zap v1.24.0
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230530153820-e85fd2cbaebc
-	google.golang.org/grpc v1.56.0
+	google.golang.org/grpc v1.56.1
 	google.golang.org/protobuf v1.30.0
 )
 
@@ -39,7 +40,6 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/klauspost/compress v1.16.6 // indirect
 	github.com/knadh/koanf v1.5.0 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
